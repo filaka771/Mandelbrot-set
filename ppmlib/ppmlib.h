@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <variant>
 #include <stdexcept>
+#include <fstream>
 
 class ppmimg{
  private:
@@ -54,14 +55,6 @@ public:
         }
     }
 
-    // color - alias for current type of pixel_list_ nodes
-    // color must be public interface to use it for working with pictures
-
-    // pixel - struct which would contain x and y coordinates of pixel on
-    // image and would be public, to make it used by user.
-    // pixel constructor would verify, that x and y less then width_ and
-    // height_. 
-
     uint32_t width() const {
         return width_;
     }
@@ -74,7 +67,97 @@ public:
         return col_depth_;
     }
 
-    void set_pixel(pixel pixel, color color){
+    void set_pixel(pixel p, color col) {
+        if (p.x >= width_ || p.y >= height_)
+            throw std::out_of_range("Pixel coordinates out of bounds");
 
+        size_t idx = p.y * width_ + p.x;
+
+        bool type_ok = std::visit([this](auto&& arg) {
+            using T = std::decay_t<decltype(arg)>;
+            if constexpr (std::is_same_v<T, color8>)
+                return col_depth_ <= 255;
+            else if constexpr (std::is_same_v<T, color16>)
+                return col_depth_ > 255;
+            else
+                return false;
+        }, col);
+
+        if (!type_ok)
+            throw std::invalid_argument("Color type does not match image depth");
+
+        pixel_list_[idx] = col;
+    }
+
+    void save(const char* filename, bool bin){
+        if(bin) 
+            save_p6(filename);
+        else
+            save_p3(filename);
+    }
+
+private:
+
+    void save_p3(const char* filename){
+        std::ofstream file(filename);
+        if (!file.is_open()) {
+            throw std::runtime_error("Cannot open file");
+        }
+
+        // Write header
+        file << "P3\n";
+        file << width_ << ' ' <<height_ << "\n";
+        file << col_depth_ << "\n";
+
+        // Write pixels colors
+        for(uint32_t y = 0; y < height_; y ++){
+            for(uint32_t x = 0; x < width_; x ++){
+                const auto& pixel = pixel_list_[y * width_ + x];
+                std::visit([&file](const auto color){
+                    file << static_cast<int>(color.r) << ' '
+                    << static_cast<int>(color.g) << ' '
+                    << static_cast<int>(color.b);
+                }, pixel);
+                file << "\n";
+            }
+        }
+    }
+
+    void save_p6(const char* filename){
+        std::ofstream file(filename, std::ios::binary);
+        if (!file) {
+            throw std::runtime_error("Cannot open file for writing");
+        }
+
+        file << "P6\n";
+        file << width_ << ' ' << height_ << '\n';
+        file << col_depth_ << '\n';
+
+        // Write pixels colors
+        for (uint32_t y = 0; y < height_; ++y) {
+            for (uint32_t x = 0; x < width_; ++x) {
+                const auto& pixel = pixel_list_[y * width_ + x];
+
+                std::visit([&file](const auto& color) {
+                    using T = std::decay_t<decltype(color)>;
+
+                    if constexpr (std::is_same_v<T, color8>) {
+                        // 8 bit 
+                        uint8_t bytes[] = {color.r, color.g, color.b};
+                        file.write(reinterpret_cast<char*>(bytes), 3);
+                    }
+                    else if constexpr (std::is_same_v<T, color16>) {
+                        // 16 bit
+                        uint16_t components[] = {color.r, color.g, color.b};
+                        for (uint16_t comp : components) {
+                            uint8_t high = (comp >> 8) & 0xFF;
+                            uint8_t low  = comp & 0xFF;
+                            file.put(high);
+                            file.put(low);
+                        }
+                    }
+                }, pixel);
+            }
+        }
     }
 };
