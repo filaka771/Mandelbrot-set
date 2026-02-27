@@ -30,21 +30,25 @@ class ppmimg{
     std::vector<std::variant<color8, color16>> pixel_list_;
 
 public:
-    struct pixel{
+    struct pixel {
         uint32_t x, y;
         pixel(uint32_t x_coord, uint32_t y_coord)
         : x(x_coord), y(y_coord){}
     };
 
-    using color = std::variant<color8, color16>;
+    struct color {
+        uint32_t r, g, b;
+        color(uint32_t red, uint32_t green, uint32_t blue)
+        : r(red), g(green), b(blue){}
+    };
 
     ppmimg(uint32_t w, uint32_t h, uint32_t cd):
-                  width_(w), height_(h), col_depth_(cd){
+        width_(w), height_(h), col_depth_(cd){
         if(col_depth_ <= 255){
             pixel_list_.resize(width_ * height_, color8(0,0,0));
         }
 
-        if(255 < col_depth_ && col_depth_ <= 255 * 255){
+        else if(col_depth_ <= 255 * 255){
             pixel_list_.resize(width_ * height_, color16(0, 0, 0));
         }
 
@@ -67,93 +71,81 @@ public:
         return col_depth_;
     }
 
-    void set_pixel(pixel p, color col) {
+    void set_pixel(pixel p, const color& col) {
         if (p.x >= width_ || p.y >= height_)
             throw std::out_of_range("Pixel coordinates out of bounds");
 
+        // Validate that each component fits the image's color depth
+        if (col.r > col_depth_ || col.g > col_depth_ || col.b > col_depth_)
+            throw std::invalid_argument("Color value exceeds image depth");
+
         size_t idx = p.y * width_ + p.x;
 
-        bool type_ok = std::visit([this](auto&& arg) {
-            using T = std::decay_t<decltype(arg)>;
-            if constexpr (std::is_same_v<T, color8>)
-                return col_depth_ <= 255;
-            else if constexpr (std::is_same_v<T, color16>)
-                return col_depth_ > 255;
-            else
-                return false;
-        }, col);
-
-        if (!type_ok)
-            throw std::invalid_argument("Color type does not match image depth");
-
-        pixel_list_[idx] = col;
+        if (col_depth_ <= 255) {
+            // Store as 8 bit
+            pixel_list_[idx] = color8(
+                                      static_cast<uint8_t>(col.r),
+                                      static_cast<uint8_t>(col.g),
+                                      static_cast<uint8_t>(col.b)
+                                      );
+        } else {
+            // Store as 16 bit
+            pixel_list_[idx] = color16(
+                                       static_cast<uint16_t>(col.r),
+                                       static_cast<uint16_t>(col.g),
+                                       static_cast<uint16_t>(col.b)
+                                       );
+        }
     }
 
-    void save(const char* filename, bool bin){
-        if(bin) 
+    void save(const char* filename, bool bin) {
+        if (bin)
             save_p6(filename);
         else
             save_p3(filename);
     }
 
 private:
-
-    void save_p3(const char* filename){
+    void save_p3(const char* filename) {
         std::ofstream file(filename);
-        if (!file.is_open()) {
+        if (!file.is_open())
             throw std::runtime_error("Cannot open file");
-        }
 
-        // Write header
-        file << "P3\n";
-        file << width_ << ' ' <<height_ << "\n";
-        file << col_depth_ << "\n";
+        file << "P3\n" << width_ << ' ' << height_ << "\n" << col_depth_ << "\n";
 
-        // Write pixels colors
-        for(uint32_t y = 0; y < height_; y ++){
-            for(uint32_t x = 0; x < width_; x ++){
+        for (uint32_t y = 0; y < height_; ++y) {
+            for (uint32_t x = 0; x < width_; ++x) {
                 const auto& pixel = pixel_list_[y * width_ + x];
-                std::visit([&file](const auto color){
-                    file << static_cast<int>(color.r) << ' '
-                    << static_cast<int>(color.g) << ' '
-                    << static_cast<int>(color.b);
+                std::visit([&file](const auto& c) {
+                    file << static_cast<int>(c.r) << ' '
+                    << static_cast<int>(c.g) << ' '
+                    << static_cast<int>(c.b);
                 }, pixel);
-                file << "\n";
+                file << '\n';
             }
         }
     }
 
-    void save_p6(const char* filename){
+    void save_p6(const char* filename) {
         std::ofstream file(filename, std::ios::binary);
-        if (!file) {
+        if (!file)
             throw std::runtime_error("Cannot open file for writing");
-        }
 
-        file << "P6\n";
-        file << width_ << ' ' << height_ << '\n';
-        file << col_depth_ << '\n';
+        file << "P6\n" << width_ << ' ' << height_ << '\n' << col_depth_ << '\n';
 
-        // Write pixels colors
         for (uint32_t y = 0; y < height_; ++y) {
             for (uint32_t x = 0; x < width_; ++x) {
                 const auto& pixel = pixel_list_[y * width_ + x];
-
-                std::visit([&file](const auto& color) {
-                    using T = std::decay_t<decltype(color)>;
-
+                std::visit([&file](const auto& c) {
+                    using T = std::decay_t<decltype(c)>;
                     if constexpr (std::is_same_v<T, color8>) {
-                        // 8 bit 
-                        uint8_t bytes[] = {color.r, color.g, color.b};
+                        uint8_t bytes[] = {c.r, c.g, c.b};
                         file.write(reinterpret_cast<char*>(bytes), 3);
-                    }
-                    else if constexpr (std::is_same_v<T, color16>) {
-                        // 16 bit
-                        uint16_t components[] = {color.r, color.g, color.b};
-                        for (uint16_t comp : components) {
-                            uint8_t high = (comp >> 8) & 0xFF;
-                            uint8_t low  = comp & 0xFF;
-                            file.put(high);
-                            file.put(low);
+                    } else if constexpr (std::is_same_v<T, color16>) {
+                        uint16_t comps[] = {c.r, c.g, c.b};
+                        for (uint16_t comp : comps) {
+                            file.put((comp >> 8) & 0xFF);
+                            file.put(comp & 0xFF);
                         }
                     }
                 }, pixel);
