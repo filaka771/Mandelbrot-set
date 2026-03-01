@@ -32,14 +32,18 @@ class ppmimg{
 public:
     struct pixel {
         uint32_t x, y;
+
+        pixel() = default;
         pixel(uint32_t x_coord, uint32_t y_coord)
-        : x(x_coord), y(y_coord){}
+            : x(x_coord), y(y_coord){}
     };
 
     struct color {
         uint32_t r, g, b;
+
+        color() = default;
         color(uint32_t red, uint32_t green, uint32_t blue)
-        : r(red), g(green), b(blue){}
+            : r(red), g(green), b(blue){}
     };
 
     ppmimg(uint32_t w, uint32_t h, uint32_t cd):

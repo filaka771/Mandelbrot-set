@@ -1,61 +1,53 @@
 #pragma once
 #include <cstdint>
 #include <vector>
+#include "ppmlib.h"
 
 template<typename T>
 class mdb{
 
 public:
     mdb(uint32_t x_resolution, uint32_t y_resolution)
-    : resolution({x_resolution, y_resolution}) {
+        : resolution_(x_resolution, y_resolution) {
         mandelbrot_set_.resize(resolution_.x_res * resolution_.y_res);
     };
 
-    void set_viewport(T min_real, T max_real, T min_imag, T max_imag)
-    : viewport_({min_real, max_real, min_imag, max_imag}) {};
-
-private:
-    struct complex{
-        T x, y;
-
-        complex(T real, T imag)
-        : x(real), y(imag) {};
-
-        T abs(complex z){
-            return abs(z.x * z.x + z.y * z.y);
-        };
-
-        complex operator+ (const complex z_1, const complex z_2){
-            complex z;
-            z.x = z_1.x + z_2.x;
-            z.y = z_1.y + z_2.y;
-            return z;
-        };
-
-        complex operator* (const complex z_1, const complex z_2){
-            complex z;
-            z.x = z_1.x * z_2.x - z_1.y * z_2.y;
-            z.y = z_1.x * z_2.y + z_1.y * z_2.x;
-
-            return z;
-        };
-
-        complex operator= ()
+    void set_viewport(T min_real, T max_real, T min_imag, T max_imag) {
+        viewport_ = {min_real, max_real, min_imag, max_imag};
     };
 
+    void calculate(){
+        T x_step = (viewport_.maxReal - viewport_.minReal) / static_cast<T>(resolution_.x_res);
+        T y_step = (viewport_.maxImag - viewport_.minImag) / static_cast<T>(resolution_.y_res);
+
+        complex z_0 = {viewport_.minReal, viewport_.maxImag};
+
+        for(uint32_t y = 0; y < resolution_.y_res; y ++){
+            for(uint32_t x = 0; x < resolution_.x_res; x ++){
+                mandelbrot_set_[y * resolution_.x_res + x] = escape_time(z_0, 128, 4);
+                z_0.x += x_step;
+            }
+            z_0.x = viewport_.minReal;
+            z_0.y -= y_step;
+        }
+    };
+
+    const std::vector<int>& get_escape_time() {return mandelbrot_set_;};
+
+private:
     struct resolution{
         uint32_t x_res, y_res;
 
         resolution(uint32_t x_resolution, uint32_t y_resolution)
-        : x_res(x_resolution), y_res(y_resolution) {};
+            : x_res(x_resolution), y_res(y_resolution) {};
     };
 
     struct viewport{
         T minReal, maxReal, minImag, maxImag;
 
         viewport(T min_real, T max_real, T min_imag, T max_imag)
-        : minReal(min_real), maxReal(max_real),
-        minImag(min_imag), maxImag(max_imag){};
+            : minReal(min_real), maxReal(max_real),
+              minImag(min_imag), maxImag(max_imag){};
     };
 
     resolution resolution_;
@@ -66,13 +58,57 @@ private:
     // lie in the Mandelbrot set
     std::vector<int> mandelbrot_set_;
 
-    int escape_time(complex z_0, int n_iter, T treshold){
-        int iter = 0;
-        complex z = z_0;
-        while(iter < n_iter){
-            z = z * z + z_0;
-        }
+    struct complex{
+        T x, y;
+
+        complex(T real = T(), T imag = T())
+            : x(real), y(imag) {};
+
+        T norm2() const{
+            return x * x + y * y;
+        };
+
+        // assignment operators (must be members)
+        complex& operator=(const complex& other) {
+            x = other.x;
+            y = other.y;
+            return *this;
+        };
+
+        // compound assignment: can be members
+        complex& operator+=(const complex& other) {
+            x += other.x;
+            y += other.y;
+            return *this;
+        };
+
+        complex& operator*=(const complex& other) {
+            T new_x = x * other.x - y * other.y;
+            y = x * other.y + y * other.x;
+            x = new_x;
+            return *this;
+        };
+    };
+
+    friend complex operator+(const complex& a, const complex& b) {
+        return complex(a.x + b.x, a.y + b.y);
+    };
+
+    friend complex operator*(const complex& a, const complex& b) {
+        return complex(a.x * b.x - a.y * b.y,
+                       a.x * b.y + a.y * b.x);
     };
 
 
+    int escape_time(complex z_0, int max_iter, T treshold){
+        int iter = 0;
+        complex z = z_0;
+        while(iter < max_iter){
+            z = z * z + z_0;
+            if(z.norm2() > treshold)
+                return iter;
+            iter ++;
+        }
+        return max_iter;
+    };
 };
