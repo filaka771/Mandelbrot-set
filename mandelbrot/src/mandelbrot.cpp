@@ -7,7 +7,7 @@
 #include <iostream>
 
 int main() {
-    auto set = mdb<double>(3840, 2160);
+    auto set = mdb<float>(3840, 2160);
     set.set_viewport(-2.5, 1, -1.25, 1.25);
     set.calculate();
 
