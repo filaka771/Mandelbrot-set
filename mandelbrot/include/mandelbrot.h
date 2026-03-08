@@ -1,6 +1,7 @@
 #pragma once
 #include <cstdint>
 #include <vector>
+#include <functional>
 #include "ppmlib.h"
 
 template<typename T>
@@ -16,7 +17,7 @@ public:
         viewport_ = {min_real, max_real, min_imag, max_imag};
     };
 
-    void calculate(){
+    void render(){
         T x_step = (viewport_.maxReal - viewport_.minReal) / static_cast<T>(resolution_.x_res);
         T y_step = (viewport_.maxImag - viewport_.minImag) / static_cast<T>(resolution_.y_res);
 
@@ -32,7 +33,20 @@ public:
         }
     };
 
-    const std::vector<int>& get_escape_time() {return mandelbrot_set_;};
+    template<auto shader>
+    void save_image(const char* file_name, const int color_depth){
+        ppmimg image(resolution_.x_res, resolution_.y_res, 255);
+
+        for(uint32_t y = 0; y < resolution_.y_res; y ++){
+            for(uint32_t x = 0; x < resolution_.x_res; x ++){
+                ppmimg::pixel pixel(x, y);
+                ppmimg::color color = shader(mandelbrot_set_[y * resolution_.x_res + x], color_depth);
+                image.set_pixel(pixel, color);
+            }
+        }
+
+        image.save(file_name, true);
+    };
 
 private:
     struct resolution{

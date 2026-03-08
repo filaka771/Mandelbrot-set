@@ -1,5 +1,8 @@
 #ifndef SHADERS
 #define SHADERS
 #include "ppmlib.h"
-ppmimg::color grey(int escape_time, int max_time);
+namespace shaders{
+    ppmimg::color gray(int escape_time, int max_time);
+    ppmimg::color indigo(int escape_time, int max_time);
+}
 #endif

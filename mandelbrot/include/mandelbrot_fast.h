@@ -51,23 +51,22 @@ public:
         _mm_free(x_coords);
     };
 
-    void save_image(const char* file_name){
-        ppmimg image(resolution_.x_res, resolution_.y_res, 255);
+    template<auto shader>
+    void save_image(const char* file_name, const int color_depth){
+        ppmimg image(resolution_.x_res, resolution_.y_res, color_depth);
 
-        for(int y = 0; y < resolution_.y_res; y ++) {
+        for(int y = 0; y < aligned_resolution_.y_res; y ++) {
             for(int x = 0; x < aligned_resolution_.x_res; x ++) {
                 if(x >= resolution_.x_res)
                     continue;
 
                 ppmimg::pixel pixel (x, y);
-                ppmimg::color color = grey(mandelbrot_set_[y * aligned_resolution_.x_res + x], 128);
-
+                ppmimg::color color = shader(mandelbrot_set_[y * aligned_resolution_.x_res + x], 128);
                 image.set_pixel(pixel, color);
-
             }
         }
 
-        image.save(file_name,false);
+        image.save(file_name,true);
     };
 
 private:
