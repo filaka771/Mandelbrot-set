@@ -5,11 +5,11 @@
 #include "ppmlib.h"
 
 template<typename T>
-class mdb{
+class mandelbrot{
 
 public:
-    mdb(uint32_t x_resolution, uint32_t y_resolution)
-        : resolution_(x_resolution, y_resolution) {
+    mandelbrot(uint32_t x_resolution, uint32_t y_resolution)
+    : resolution_(x_resolution, y_resolution) {
         mandelbrot_set_.resize(resolution_.x_res * resolution_.y_res);
     };
 
