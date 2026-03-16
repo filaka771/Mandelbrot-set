@@ -52,3 +52,40 @@ target_link_libraries(multi_mandelbrot PRIVATE
   mpfr  # library name as known to the linker
   gmp   # MPFR depends on GMP, so link both
 )
+
+
+# ── GPU Mandelbrot Executable (Perturbation) ──
+add_library(kernel ${CMAKE_CURRENT_SOURCE_DIR}/perturbation_mandelbrot/src/kernel.cu)
+add_executable(multi_mandelbrot_gpu
+  perturbation_mandelbrot/src/main_gpu.cpp          # Your main() that uses mdb<T>::renderGPU()
+)
+
+find_package(CUDAToolkit REQUIRED)
+set(PERTURBATION_MANDELBROT ${CMAKE_CURRENT_SOURCE_DIR}/perturbation_mandelbrot/include)
+target_include_directories(multi_mandelbrot_gpu PRIVATE
+  ${PERTURBATION_MANDELBROT}
+  ${SHADERS_INCLUDE} # Ok
+  ${PPMLIB_INCLUDE}  # Ok
+)
+
+target_link_libraries(multi_mandelbrot_gpu PRIVATE shaders CUDA::cudart kernel)
+
+# CUDA-specific flags
+set_target_properties(multi_mandelbrot_gpu PROPERTIES
+  CUDA_SEPARABLE_COMPILATION ON
+  CUDA_RESOLVE_DEVICE_SYMBOLS ON
+)
+
+target_compile_options(multi_mandelbrot_gpu PRIVATE
+  $<$<COMPILE_LANGUAGE:CUDA>:
+--use_fast_math
+-Xcudafe=--display_error_number
+>
+)
+
+# Optional: Enable debug symbols for cuda-gdb
+#if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+#target_compile_options(multi_mandelbrot_gpu PRIVATE
+#$<$<COMPILE_LANGUAGE:CUDA>:-g -G>
+#)
+#endif())
