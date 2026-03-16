@@ -10,7 +10,7 @@ int main() {
     // Classic Mandelbrot view: centre at (-0.5, 0), width ~3
     mb.set_viewport(-2.5f, 1.5f, -1.5f, 1.5f);
     mb.render();
-    mb.save_image<shaders::gray>("mandelbrot_fast.ppm", 255);
+    mb.save_image<shaders::grey>("mandelbrot_fast.ppm", 255);
 
     return 0;
 }

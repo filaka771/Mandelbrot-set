@@ -1,10 +1,6 @@
 #include "ppmlib.h"
 #include "shaders.h"
 #include "mandelbrot.h"
-#include <vector>
-
-#include <algorithm>
-#include <iostream>
 
 int main() {
     auto set = mdb<float>(3840, 2160);

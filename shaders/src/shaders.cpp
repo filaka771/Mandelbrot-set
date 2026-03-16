@@ -1,7 +1,7 @@
 #include "ppmlib.h"
 #include <cmath>
 namespace shaders{
-    ppmimg::color gray(int escape_time, int max_time) {
+    ppmimg::color grey(int escape_time, int max_time) {
         ppmimg::color color;
 
         float fmax_time    = static_cast<float>(max_time);
