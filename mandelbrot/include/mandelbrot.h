@@ -6,7 +6,6 @@
 
 template<typename T>
 class mandelbrot{
-
 public:
     mandelbrot(uint32_t x_resolution, uint32_t y_resolution)
     : resolution_(x_resolution, y_resolution) {
