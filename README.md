@@ -40,11 +40,17 @@ Before building, ensure you have the following installed:
 ## Examples
 
 **Mandelbrot set rendered with the Grey shader:**
+
 ![Alt text](examples/mandelbrot.png)
+
 **Mandelbrot set rendered using the vectorized implementation:**
+
 ![Alt text](examples/mandelbrot_fast.png)
+
 **Deep Zoom Example:**
+
 Center: `(-1.295..., 0.440...)` | Viewport: Square with side `5.1E-55`.
+
 ![Alt text](examples/multi_mandelbrot_deep_zoom_1.png)
 
 ## Performance
