@@ -9,9 +9,14 @@ namespace shaders{
 
         fescape_time = (fescape_time / max_time) * 255;
 
-        color.r = static_cast<uint32_t>(fescape_time);
-        color.g = static_cast<uint32_t>(fescape_time);
-        color.b = static_cast<uint32_t>(fescape_time);
+        if(escape_time == max_time){
+            color = {0, 0, 0};
+        }
+        else{
+            color.r = 255 * (0.5 + 0.5 * std::cos(3.0 + fescape_time * 0.15));
+            color.g = 255 * (0.5 + 0.5 * std::cos(3.0 + fescape_time * 0.15));
+            color.b = 255 * (0.5 + 0.5 * std::cos(3.0 + fescape_time * 0.15));
+        }
 
         return color;
     }
