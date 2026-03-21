@@ -1,8 +1,9 @@
 #pragma once
 #include <cstdint>
 #include <vector>
-#include <functional>
+#include <iostream>
 #include "ppmlib.h"
+#include <omp.h>
 
 template<typename T>
 class mandelbrot{
@@ -16,21 +17,38 @@ public:
         viewport_ = {min_real, max_real, min_imag, max_imag};
     };
 
-    void render(){
+    void set_calculation_iterations(int calculation_iterations) {
+        calculation_iterations_ = calculation_iterations;
+    }
+
+    void render(bool parallel = false) {
         T x_step = (viewport_.maxReal - viewport_.minReal) / static_cast<T>(resolution_.x_res);
         T y_step = (viewport_.maxImag - viewport_.minImag) / static_cast<T>(resolution_.y_res);
 
-        complex z_0 = {viewport_.minReal, viewport_.maxImag};
 
-        for(uint32_t y = 0; y < resolution_.y_res; y ++){
-            for(uint32_t x = 0; x < resolution_.x_res; x ++){
-                mandelbrot_set_[y * resolution_.x_res + x] = escape_time(z_0, 128, 4);
-                z_0.x += x_step;
+        if (parallel) {
+            #pragma omp parallel for num_threads(12) collapse(2) schedule(dynamic)
+            for (uint32_t y = 0; y < resolution_.y_res; ++y) {
+                for (uint32_t x = 0; x < resolution_.x_res; ++x) {
+                    T real = viewport_.minReal + static_cast<T>(x) * x_step;
+                    T imag = viewport_.maxImag - static_cast<T>(y) * y_step;
+                    complex c(real, imag);
+                    mandelbrot_set_[y * resolution_.x_res + x] = escape_time(c, calculation_iterations_, 4);
+                }
+                //std::cout << "Processed " << y << " lines from " << resolution_.y_res << " lines.\n";
             }
-            z_0.x = viewport_.minReal;
-            z_0.y -= y_step;
+        } else {
+            // Sequential version – same pixel‑wise computation
+            for (uint32_t y = 0; y < resolution_.y_res; ++y) {
+                for (uint32_t x = 0; x < resolution_.x_res; ++x) {
+                    T real = viewport_.minReal + static_cast<T>(x) * x_step;
+                    T imag = viewport_.maxImag - static_cast<T>(y) * y_step;
+                    complex c(real, imag);
+                    mandelbrot_set_[y * resolution_.x_res + x] = escape_time(c, calculation_iterations_, 4);
+                }
+            }
         }
-    };
+    }
 
     template<auto shader>
     void save_image(const char* file_name, const int color_depth){
@@ -65,6 +83,7 @@ private:
 
     resolution resolution_;
     viewport viewport_ = {0, 0, 0, 0};
+    int calculation_iterations_ = 128;
 
     // Vector contains num of iterations, which
     // required to verify that point lies or doesn't
