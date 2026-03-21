@@ -22,6 +22,7 @@ int main(){
     auto start = std::chrono::steady_clock::now();
 
     for(int i = 0; i < NUM_OF_ITERATIONS; i ++) {
+        // Shift the viewport here as well for fairness
         naive_mandelbrot.render();
     }
 

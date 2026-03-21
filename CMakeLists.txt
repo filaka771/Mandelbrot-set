@@ -3,6 +3,9 @@ project(Mandlebrot)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+
+find_package(OpenMP REQUIRED) 
 
 # Define include paths
 set(PPMLIB_INCLUDE ${CMAKE_CURRENT_SOURCE_DIR}/ppmlib/include)
@@ -27,6 +30,8 @@ target_include_directories(mandelbrot PRIVATE
   ${PPMLIB_INCLUDE}
 )
 target_link_libraries(mandelbrot PRIVATE shaders)
+target_link_libraries(mandelbrot PRIVATE OpenMP::OpenMP_CXX)
+
 target_compile_options(mandelbrot PRIVATE -O3)
 
 # 4. Fast Mandelbrot Executable
@@ -49,10 +54,12 @@ target_include_directories(multi_mandelbrot PRIVATE
 )
 
 target_link_libraries(multi_mandelbrot PRIVATE
+  OpenMP::OpenMP_CXX
   shaders
   mpfr  # library name as known to the linker
   gmp   # MPFR depends on GMP, so link both
 )
+
 target_compile_options(multi_mandelbrot PRIVATE -O3)
 # 6. Performance test
 add_executable(perf_test perf_test/src/perf_test.cpp)
@@ -62,5 +69,5 @@ target_include_directories(perf_test PRIVATE
     ${SHADERS_INCLUDE}
     ${PPMLIB_INCLUDE}
 )
-target_link_libraries(shaders)
-target_compile_options(perf_test PRIVATE -mavx2 -mfma -O3)
+target_link_libraries(multi_mandelbrot PRIVATE shaders OpenMP::OpenMP_CXX)
+target_compile_options(perf_test PRIVATE -mavx2 -mfma -O1)
